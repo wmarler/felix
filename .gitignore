@@ -1,0 +1,6 @@
+flatcar_production_qemu_image.*
+src/felix.secrets
+felix.ign
+flatcar_boot.log
+staging/
+*.swp

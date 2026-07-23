@@ -1,0 +1,46 @@
+name: adguard2
+
+services:
+  adguard2:
+    container_name: adguard2
+    image: adguard/adguardhome:latest
+    user: "3553:3553"
+    cap_add:
+      - NET_BIND_SERVICE
+    ports:
+      # --- VIP DNS binding for when keepalived makes this node master
+      - "10.10.1.10:53:53/tcp"
+      - "10.10.1.10:53:53/udp"
+      # --- Real-IP DNS binding for direct testing & API syncing
+      - "10.10.1.12:53:53/tcp"
+      - "10.10.1.12:53:53/udp"
+      # --- Web UI
+      - "10.10.1.12:82:80/tcp"
+      - "10.10.1.12:3002:3000/tcp"
+      #- "10.10.1.12:443:443"  
+      #- 5443:5443
+    volumes:
+      - /opt/adguard/conf:/opt/adguardhome/conf
+      - /opt/adguard/work:/opt/adguardhome/work
+      - /etc/localtime:/etc/localtime:ro
+
+  adguardhome-sync:
+    image: ghcr.io/bakito/adguardhome-sync:latest
+    container_name: adguard-sync
+    environment:
+      # How often to check (cron syntax)
+      - CRON=*/10 * * * *
+      # Primary (the raspberry pi)
+      - ORIGIN_URL=http://10.10.1.9:80
+      - ORIGIN_USERNAME=will
+      - ORIGIN_PASSWORD=@@ADGUARD_PASSWORD_PLAINTEXT@@
+      # Secondary (the container)
+      - REPLICA_URL=http://adguard2:80
+      - REPLICA_USERNAME=will
+      - REPLICA_PASSWORD=@@ADGUARD_PASSWORD_PLAINTEXT@@
+      # Features
+      - SYNC_CLIENTS=true
+      - SYNC_DHCP_SERVER=false  # DHCP isn't enabled anyway
+      - RUN_ON_START=true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro

@@ -1,0 +1,127 @@
+---
+variant: flatcar
+version: 1.1.0
+storage:
+  directories:
+    - path: /etc/docker-compose
+      mode: 0755
+    - path: /opt/adguard/conf
+      mode: 0775
+      group:
+        id: 3553
+    - path: /opt/adguard/work
+      mode: 0775
+      group:
+        id: 3553
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      contents:
+        inline: felix
+    - path: /etc/systemd/network/static.network
+      mode: 0644
+      contents:
+        local: network.config
+    - path: /etc/fstab
+      mode: 0644
+      append:
+        - inline: |
+            10.10.1.99:/media /media nfs defaults,noauto,noatime,nofail,_netdev 0 0
+    - path: /etc/sysupdate.d/noop.conf
+      contents:
+        source: https://extensions.flatcar.org/extensions/noop.conf
+    - path: /opt/extensions/docker-compose/docker-compose-5.3.1-x86-64.raw
+      mode: 0644
+      contents:
+        source: http://extensions.flatcar.org/extensions/docker-compose-5.3.1-x86-64.raw
+    - path: /etc/sysupdate.docker-compose.d/docker-compose.conf
+      contents:
+        source: https://extensions.flatcar.org/extensions/docker-compose.conf
+    - path: /opt/extensions/keepalived/keepalived-v2.4.2-x86-64.raw
+      mode: 0644
+      contents:
+        source: https://extensions.flatcar.org/extensions/keepalived-v2.4.2-x86-64.raw
+    - path: /etc/sysupdate.keepalived.d/keepalived.conf
+      contents:
+        source: https://extensions.flatcar.org/extensions/keepalived.conf
+    - path: /etc/keepalived/keepalived.conf
+      mode: 0644
+      contents:
+        local: keepalived.conf
+    - path: /etc/default/keepalived
+      mode: 0644
+      contents:
+        inline: |
+          # Options to pass to keepalived
+
+          # DAEMON_ARGS are appended to the keepalived command-line
+          DAEMON_ARGS=""
+    - path: /opt/adguard/conf/AdGuardHome.yaml
+      group:
+        id: 3553
+      mode: 0664
+      contents:
+        local: AdGuardHome.yaml
+    - path: /etc/docker-compose/adguard2/compose.yaml
+      mode: 0644
+      contents:
+        local: adguard-compose.yaml
+
+  links:
+    - target: /opt/extensions/docker-compose/docker-compose-5.3.1-x86-64.raw
+      path: /etc/extensions/docker-compose.raw
+      hard: false
+    - target: /opt/extensions/keepalived/keepalived-v2.4.2-x86-64.raw
+      path: /etc/extensions/keepalived.raw
+      hard: false
+    - target: /usr/share/zoneinfo/America/Denver
+      path: /etc/localtime
+      overwrite: true
+
+
+systemd:
+  units:
+    - name: keepalived.service
+      enabled: false
+      contents_local: keepalived.service
+    - name: adguard2.service
+      enabled: false
+      contents_local: adguard.service
+    - name: systemd-sysupdate.timer
+      enabled: true
+    - name: systemd-sysupdate.service
+      dropins:
+        - name: docker-compose.conf
+          contents: |
+            [Service]
+            ExecStartPre=/usr/bin/sh -c "readlink --canonicalize /etc/extensions/docker-compose.raw > /tmp/docker-compose"
+            ExecStartPre=/usr/lib/systemd/systemd-sysupdate -C docker-compose update
+            ExecStartPost=/usr/bin/sh -c "readlink --canonicalize /etc/extensions/docker-compose.raw > /tmp/docker-compose-new"
+            ExecStartPost=/usr/bin/sh -c "if ! cmp --silent /tmp/docker-compose /tmp/docker-compose-new; then touch /run/reboot-required; fi"
+        - name: keepalived.conf
+          contents: |
+            [Service]
+            ExecStartPre=/usr/bin/sh -c "readlink --canonicalize /etc/extensions/keepalived.raw > /tmp/keepalived"
+            ExecStartPre=/usr/lib/systemd/systemd-sysupdate -C keepalived update
+            ExecStartPost=/usr/bin/sh -c "readlink --canonicalize /etc/extensions/keepalived.raw > /tmp/keepalived-new"
+            ExecStartPost=/usr/bin/sh -c "if ! cmp --silent /tmp/keepalived /tmp/keepalived-new; then touch /run/reboot-required; fi"
+
+passwd:
+  groups:
+    - name: adguard
+      gid: 3553
+  users:
+    - name: adguard
+      uid: 3553
+      primary_group: adguard
+      no_create_home: true
+      shell: /sbin/nologin
+    - name: will
+      ssh_authorized_keys:
+        - "@@LAPTOP_PUBLIC_KEY@@"
+        - "@@DESKTOP_PUBLIC_KEY@@"
+      shell: /usr/bin/zsh
+    - name: core
+      ssh_authorized_keys:
+        - "@@LAPTOP_PUBLIC_KEY@@"
+        - "@@DESKTOP_PUBLIC_KEY@@"
