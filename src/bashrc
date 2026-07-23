@@ -1,0 +1,107 @@
+[[ $- != *i* ]] && return
+
+# colors
+eval "$(dircolors -b << 'EOF'
+COLOR tty
+OPTIONS -F -T 0
+TERM linux
+TERM screen
+TERM console
+TERM con132x25
+TERM con132x30
+TERM con132x43
+TERM con132x60
+TERM con80x25
+TERM con80x28
+TERM con80x30
+TERM con80x43
+TERM con80x50
+TERM con80x60
+TERM xterm
+TERM rxvt
+TERM vt100
+TERM Eterm
+EIGHTBIT 1
+NORMAL 00   # global default, although everything should be something.
+FILE 00     # normal file
+DIR 01;34   # directory
+LINK 01;35  # symbolic link
+FIFO 40;33  # pipe
+SOCK 01;35  # socket
+BLK 40;33;01    # block device driver
+CHR 40;33;01    # character device driver
+EXEC 01;32
+.btm 01;32
+.tar 01;31
+.tgz 01;31
+.arj 01;31
+.gz  01;31
+.bz2 01;31
+.zip 01;31
+.rar 01;31
+.7z 01;31
+.ace 01;31
+.dar 01;31
+.lzo 01;31
+.tbz2 01;31
+.deb 01;35
+.rpm 01;35
+.htm 01;36
+.php 01;36
+.php3 01;36
+.html 01;36
+.c 04;43;30
+.cpp 04;43;30
+.h 00;43;30
+.hpp 00;43;30
+EOF
+)"
+# Bash completion
+[ -f /etc/bash_completion ] && . /etc/bash_completion
+
+# Key bindings
+bind '"\e[A": history-search-backward'
+bind '"\e[B": history-search-forward'
+bind '"\C-k": kill-line'
+bind '"\e[H": beginning-of-line'        # Home (xorg)
+bind '"\e[1~": beginning-of-line'       # Home (console)
+bind '"\e[4~": end-of-line'             # End (console)
+bind '"\e[F": end-of-line'              # End (xorg)
+bind '"\e[2~": overwrite-mode'          # Ins
+bind '"\e[3~": delete-char'             # Delete
+bind '"\eOH": beginning-of-line'
+bind '"\eOF": end-of-line'
+bind 'set bell-style none'
+
+# ALIASES
+alias ll="ls -lah"
+alias ls="ls --color=auto"
+alias reboot="shutdown -r now"
+alias gs='git status'
+alias gpom='git pull origin master'
+alias s='sudo su -'
+
+# ENVIRONMENT
+export SYSTEMD_EDITOR=vim
+export EDITOR=vim
+export VISUAL=vim
+export HISTFILE=~/.bash_history
+export HISTSIZE=10000
+export HISTFILESIZE=10000
+export HISTCONTROL=ignoredups
+
+# OPTIONS
+set -o notify                            # NOTIFY
+shopt -s autocd                          # AUTOCD
+shopt -s histappend                      # APPEND_HISTORY
+
+PROMPT_COMMAND="history -a; history -c; history -r${PROMPT_COMMAND:+; $PROMPT_COMMAND}"  # SHARE_HISTORY
+# PROMPT
+color_green='\[\033[32m\]'
+color_blue_bold='\[\033[1;34m\]'
+color_reset='\[\033[0m\]'
+PS1="${color_green}\u@\h${color_reset} ${color_blue_bold}\w${color_reset} \$ "
+
+
+tabs -4
+

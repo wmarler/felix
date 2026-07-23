@@ -41,6 +41,25 @@ if [[ $fresh =~ [Yy] ]]; then
   echo "Existing image replaced with vanilla"
 fi
 
-echo "Starting live image!"
-./flatcar_production_qemu.sh -i felix.ign -- -nographic -netdev tap,id=tap0,br=br0,helper=/usr/lib/qemu/qemu-bridge-helper -device virtio-net-pci,netdev=tap0,mac=FE:ED:FA:CE:F0:0D
-
+echo "Starting live image (logging to felix.log)"
+# ./flatcar_production_qemu.sh -i felix.ign -- -nographic -netdev tap,id=tap0,br=br0,helper=/usr/lib/qemu/qemu-bridge-helper -device virtio-net-pci,netdev=tap0,mac=FE:ED:FA:CE:F0:0D
+rm -f felix.log
+./flatcar_production_qemu.sh -i felix.ign -- \
+    -display none \
+    -serial file:felix.log \
+    -netdev tap,id=tap0,br=br0,helper=/usr/lib/qemu/qemu-bridge-helper \
+    -device virtio-net-pci,netdev=tap0,mac=FE:ED:FA:CE:F0:0D \
+    < /dev/null &
+while [ ! -f felix.log ]; do
+  sleep 0.5;
+done
+tail -f felix.log &
+TAIL_PID=$!
+until ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes -i /home/osmc/.ssh/id_ed25519 core@10.10.1.12 true 2>/dev/null; do
+  sleep 5
+done
+kill $TAIL_PID
+wait $TAIL_PID 2>/dev/null
+echo ""
+echo "Felix is up!"
+echo "   ssh -i /home/osmc/.ssh/id_ed25519 core@10.10.1.12"

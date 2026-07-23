@@ -4,3 +4,4 @@ felix.ign
 flatcar_boot.log
 staging/
 *.swp
+felix.log

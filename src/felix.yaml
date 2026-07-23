@@ -25,21 +25,35 @@ storage:
       mode: 0644
       contents:
         local: network.config
-    - path: /etc/fstab
-      mode: 0644
-      append:
-        - inline: |
-            10.10.1.99:/media /media nfs defaults,noauto,noatime,nofail,_netdev 0 0
-    - path: /etc/sysctl.d/99-disable-ipv6.conf
-      contents:
-        inline: |
-          net.ipv6.conf.all.disable_ipv6 = 1
-          net.ipv6.conf.default.disable_ipv6 = 1
-          net.ipv6.conf.lo.disable_ipv6 = 1
+        #     - path: /etc/fstab
+        #       mode: 0644
+        #       append:
+        #         - inline: |
+        #             10.10.1.99:/media /media nfs defaults,noauto,noatime,nofail,_netdev 0 0
     - path: /etc/sysctl.d/99-keepalived-vrrp.conf
       contents:
         inline: |
           net.ipv4.ip_nonlocal_bind = 1
+    - path: /home/core/.bashrc
+      overwrite: true
+      contents:
+        local: bashrc
+      group:
+        name: core
+      user:
+        name: core
+    - path: /home/will/.bashrc
+      overwrite: true
+      contents:
+        local: bashrc
+      group:
+        name: will
+      user:
+        name: will
+    - path: /root/.bashrc
+      overwrite: true
+      contents:
+        local: bashrc_root
     - path: /etc/sysupdate.d/noop.conf
       contents:
         source: https://extensions.flatcar.org/extensions/noop.conf
@@ -68,7 +82,7 @@ storage:
           # Options to pass to keepalived
 
           # DAEMON_ARGS are appended to the keepalived command-line
-          DAEMON_ARGS=""
+          # DAEMON_ARGS=""
     - path: /opt/adguard/conf/AdGuardHome.yaml
       group:
         id: 3553
@@ -94,12 +108,15 @@ storage:
 
 systemd:
   units:
-    - name: keepalived.service
-      enabled: false
-      contents_local: keepalived.service
     - name: adguard2.service
       enabled: true
       contents_local: adguard2.service
+    - name: keepalived.service
+      dropins:
+        - name: 20-ordering.conf
+          contents: |
+            [Unit]
+            After=adguard2.service
     - name: systemd-sysupdate.timer
       enabled: true
     - name: systemd-sysupdate.service
@@ -123,6 +140,8 @@ passwd:
   groups:
     - name: adguard
       gid: 3553
+    - name: will
+      gid: 8008
   users:
     - name: adguard
       uid: 3553
@@ -130,11 +149,14 @@ passwd:
       no_create_home: true
       shell: /sbin/nologin
     - name: will
+      uid: 8008
+      primary_group: will
       ssh_authorized_keys:
         - "@@LAPTOP_PUBLIC_KEY@@"
         - "@@DESKTOP_PUBLIC_KEY@@"
-      shell: /usr/bin/zsh
+        - "@@SERVER_PUBLIC_KEY@@"
     - name: core
       ssh_authorized_keys:
         - "@@LAPTOP_PUBLIC_KEY@@"
         - "@@DESKTOP_PUBLIC_KEY@@"
+        - "@@SERVER_PUBLIC_KEY@@"

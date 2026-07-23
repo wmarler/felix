@@ -1,8 +1,10 @@
+---
 name: adguard2
 
 services:
   adguard2:
     container_name: adguard2
+    restart: unless-stopped
     image: adguard/adguardhome:latest
     user: "3553:3553"
     cap_add:
@@ -17,8 +19,8 @@ services:
       # --- Web UI
       - "10.10.1.12:82:80/tcp"
       - "10.10.1.12:3002:3000/tcp"
-      #- "10.10.1.12:443:443"  
-      #- 5443:5443
+      # - "10.10.1.12:443:443"
+      # - 5443:5443
     volumes:
       - /opt/adguard/conf:/opt/adguardhome/conf
       - /opt/adguard/work:/opt/adguardhome/work
@@ -28,12 +30,13 @@ services:
       interval: 3s
       timeout: 1s
       retries: 3
-      start_period: 15s
+      start_period: 20s
 
   adguardhome-sync:
-    image: ghcr.io/bakito/adguardhome-sync:latest
     container_name: adguard-sync
-    depends_on: 
+    restart: unless-stopped
+    image: ghcr.io/bakito/adguardhome-sync:latest
+    depends_on:
       adguard2:
         condition: service_healthy
     environment:

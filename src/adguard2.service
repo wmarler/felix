@@ -13,7 +13,7 @@ WorkingDirectory=/etc/docker-compose/adguard2
 ExecStartPre=-/usr/bin/docker compose -f compose.yaml down
 
 # Run in the foreground so systemd tracks the process
-ExecStart=/usr/bin/docker compose -f compose.yaml up --abort-on-container-exit
+ExecStart=/usr/bin/docker compose -f compose.yaml up
 
 # Graceful shutdown
 ExecStop=/usr/bin/docker compose -f compose.yaml down

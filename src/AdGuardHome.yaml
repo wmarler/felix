@@ -1,8 +1,9 @@
+---
 http:
   address: 0.0.0.0:80
 users:
   - name: will
-    password: @@ADGUARD_PASSWORD_HASH@@
+    password: "@@ADGUARD_PASSWORD_HASH@@"
 dns:
   bind_hosts:
     - 0.0.0.0
