@@ -1,6 +1,9 @@
 ---
 variant: flatcar
 version: 1.1.0
+kernel_arguments:
+  should_exist:
+    - ipv6.disable=1
 storage:
   directories:
     - path: /etc/docker-compose
@@ -27,6 +30,16 @@ storage:
       append:
         - inline: |
             10.10.1.99:/media /media nfs defaults,noauto,noatime,nofail,_netdev 0 0
+    - path: /etc/sysctl.d/99-disable-ipv6.conf
+      contents:
+        inline: |
+          net.ipv6.conf.all.disable_ipv6 = 1
+          net.ipv6.conf.default.disable_ipv6 = 1
+          net.ipv6.conf.lo.disable_ipv6 = 1
+    - path: /etc/sysctl.d/99-keepalived-vrrp.conf
+      contents:
+        inline: |
+          net.ipv4.ip_nonlocal_bind = 1
     - path: /etc/sysupdate.d/noop.conf
       contents:
         source: https://extensions.flatcar.org/extensions/noop.conf
@@ -85,8 +98,8 @@ systemd:
       enabled: false
       contents_local: keepalived.service
     - name: adguard2.service
-      enabled: false
-      contents_local: adguard.service
+      enabled: true
+      contents_local: adguard2.service
     - name: systemd-sysupdate.timer
       enabled: true
     - name: systemd-sysupdate.service

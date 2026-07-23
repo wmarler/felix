@@ -1,8 +1,8 @@
 [Unit]
 Description=adguard and adguard-sync docker compose linked services
 PartOf=docker.service
-Requires=docker.service
-After=docker.service
+Requires=docker.service network-online.target
+After=docker.service network-online.target
 
 [Service]
 Type=simple
@@ -10,13 +10,13 @@ Slice=docker-compose.slice
 WorkingDirectory=/etc/docker-compose/adguard2
 
 # Tear down any existing state before starting
-ExecStartPre=-/usr/bin/docker compose -f compose.yml down
+ExecStartPre=-/usr/bin/docker compose -f compose.yaml down
 
 # Run in the foreground so systemd tracks the process
-ExecStart=/usr/bin/docker compose -f compose.yml up --abort-on-container-exit
+ExecStart=/usr/bin/docker compose -f compose.yaml up --abort-on-container-exit
 
 # Graceful shutdown
-ExecStop=/usr/bin/docker compose -f compose.yml down
+ExecStop=/usr/bin/docker compose -f compose.yaml down
 
 # Let systemd handle the restart logic
 Restart=always
