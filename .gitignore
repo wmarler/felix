@@ -5,3 +5,5 @@ flatcar_boot.log
 staging/
 *.swp
 felix.log
+*.iso
+*.img
