@@ -1,0 +1,67 @@
+# Felix configuration, sourced by both run_felix.sh and install_felix.sh.
+#
+# Copy this file to "felix.config" (which is git-ignored) and fill in your
+# values. It is plain bash, so quote anything with spaces.
+
+###############################################################################
+# Global — used by both scripts
+###############################################################################
+
+# Linux bridge the VM's NIC is attached to. For run_felix.sh this is a bridge
+# on the local machine (QEMU tap); for install_felix.sh it is a bridge on the
+# hypervisor. Either way it must carry the subnet in src/network.config.
+HOST_BRIDGE="br0"
+
+# MAC address of the VM's NIC. Must match the MACAddress= line in
+# src/network.config, otherwise the static IP will not be applied.
+GUEST_MAC="FE:ED:FA:CE:F0:0D"
+
+###############################################################################
+# install_felix.sh — permanent install on a remote libvirt hypervisor
+###############################################################################
+# All device and file paths in this section are paths ON THE HYPERVISOR.
+
+# SSH user and host of the libvirt/QEMU hypervisor. virt-install runs locally
+# and connects via qemu+ssh://USER@HOST/system.
+HYPERVISOR_USER="libvirt"
+HYPERVISOR_HOST="hypervisor.example.com"
+# Optional: override the full URI instead (takes precedence if set).
+#LIBVIRT_URI="qemu+ssh://libvirt@hypervisor.example.com/system"
+
+VM_NAME="felix"
+VM_RAM="4096"      # MiB
+VM_VCPUS="1"
+
+# Block devices (LVM logical volumes, etc.). The OS disk is what
+# flatcar-install writes to; the other three are formatted and mounted by
+# Ignition on first boot (see src/felix.yaml -> storage.filesystems).
+OS_DISK="/dev/VG_NAME/felix"
+APPDATA_DISK="/dev/VG_NAME/felix-appdata"         # -> /mnt/appdata
+CONTAINERD_DISK="/dev/VG_NAME/felix-containerd"   # -> /var/lib/containerd
+DOCKER_DISK="/dev/VG_NAME/felix-docker"           # -> /var/lib/docker
+
+# Flatcar ISO, already downloaded onto the hypervisor:
+#   https://stable.release.flatcar-linux.net/amd64-usr/current/flatcar_production_iso_image.iso
+ISO_PATH="/var/lib/libvirt/images/flatcar_production_iso_image.iso"
+
+# Optional, informational only: URL the installer VM can curl felix.ign from.
+# Publishing felix.ign there is up to you (nginx on the hypervisor, S3, ...).
+#IGNITION_URL="http://10.0.0.1/felix.ign"
+
+###############################################################################
+# run_felix.sh — local QEMU live image
+###############################################################################
+
+# Where run_felix.sh waits for SSH to come up after boot, and the key it uses.
+SSH_TARGET="core@10.0.0.12"
+SSH_KEY="${HOME}/.ssh/id_ed25519"
+
+# Optional: local image file names (defaults shown).
+#QEMU_IMAGE="flatcar_production_qemu_image.img"
+#QEMU_IMAGE_VANILLA="flatcar_production_qemu_image.img.vanilla"
+
+# Optional: the live image gets three sparse qcow2 data disks (appdata,
+# containerd, docker) so src/felix.yaml's storage.filesystems entries resolve
+# just like on a permanent install. Defaults shown.
+#DATA_DISK_DIR="disks"
+#DATA_DISK_SIZE="10G"

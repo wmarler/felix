@@ -5,14 +5,36 @@ kernel_arguments:
   should_exist:
     - ipv6.disable=1
 storage:
+  filesystems:
+    - device: /dev/disk/by-id/virtio-appdata
+      format: ext4
+      path: /mnt/appdata
+      wipe_filesystem: true
+      with_mount_unit: true
+      label: appdata
+    - device: /dev/disk/by-id/virtio-containerd
+      format: ext4
+      path: /var/lib/containerd
+      wipe_filesystem: true
+      with_mount_unit: true
+      label: containerd
+    - device: /dev/disk/by-id/virtio-docker
+      format: ext4
+      path: /var/lib/docker
+      wipe_filesystem: true
+      with_mount_unit: true
+      label: docker
   directories:
-    - path: /etc/docker-compose
+    # Units dropped here are linked+enabled at boot by link-appdata-services.service
+    - path: /mnt/appdata/systemd-units
       mode: 0755
-    - path: /opt/adguard/conf
+    - path: /mnt/appdata/adguard2
+      mode: 0755
+    - path: /mnt/appdata/adguard2/conf
       mode: 0775
       group:
         id: 3553
-    - path: /opt/adguard/work
+    - path: /mnt/appdata/adguard2/work
       mode: 0775
       group:
         id: 3553
@@ -25,11 +47,11 @@ storage:
       mode: 0644
       contents:
         local: network.config
-        #     - path: /etc/fstab
-        #       mode: 0644
-        #       append:
-        #         - inline: |
-        #             10.10.1.99:/media /media nfs defaults,noauto,noatime,nofail,_netdev 0 0
+#   - path: /etc/fstab
+#     mode: 0644
+#     append:
+#       - inline: |
+#           10.10.1.99:/media /media nfs defaults,noauto,noatime,nofail,_netdev 0 0
     - path: /etc/sysctl.d/99-keepalived-vrrp.conf
       contents:
         inline: |
@@ -83,16 +105,26 @@ storage:
 
           # DAEMON_ARGS are appended to the keepalived command-line
           # DAEMON_ARGS=""
-    - path: /opt/adguard/conf/AdGuardHome.yaml
+    # --- AdGuard: unit, compose file and config live on the persistent appdata disk.
+    # overwrite: true so a reinstall onto an existing appdata disk succeeds
+    # (Ignition fails on pre-existing files otherwise). The work/ dir is left alone.
+    - path: /mnt/appdata/systemd-units/adguard2.service
+      mode: 0644
+      overwrite: true
+      contents:
+        local: adguard2.service
+    - path: /mnt/appdata/adguard2/compose.yaml
+      mode: 0644
+      overwrite: true
+      contents:
+        local: adguard-compose.yaml
+    - path: /mnt/appdata/adguard2/conf/AdGuardHome.yaml
       group:
         id: 3553
       mode: 0664
+      overwrite: true
       contents:
         local: AdGuardHome.yaml
-    - path: /etc/docker-compose/adguard2/compose.yaml
-      mode: 0644
-      contents:
-        local: adguard-compose.yaml
 
   links:
     - target: /opt/extensions/docker-compose/docker-compose-5.3.1-x86-64.raw
@@ -108,9 +140,48 @@ storage:
 
 systemd:
   units:
-    - name: adguard2.service
+    - name: containerd.service
+      dropins:
+        - name: 10-felix-mounts.conf
+          contents: |
+            [Unit]
+            RequiresMountsFor=/var/lib/containerd
+            After=var-lib-containerd.mount
+    - name: docker.service
+      dropins:
+        - name: 10-felix-mounts.conf
+          contents: |
+            [Unit]
+            RequiresMountsFor=/var/lib/docker
+            RequiresMountsFor=/var/lib/containerd
+            After=var-lib-docker.mount var-lib-containerd.mount
+    - name: link-appdata-services.service
       enabled: true
-      contents_local: adguard2.service
+      contents: |
+        [Unit]
+        Description=Link and enable persistent systemd units (for Docker containers)
+        RequiresMountsFor=/mnt/appdata
+        RequiresMountsFor=/var/lib/docker
+        Wants=docker.service
+        After=var-lib-docker.mount docker.service
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        # "systemctl enable <abs path>" links the unit into /etc/systemd/system and
+        # enables it in one step; it is idempotent on reboot (systemctl link is not).
+        # --now also starts it.
+        ExecStart=/bin/bash -c 'for f in /mnt/appdata/systemd-units/*.service; do [ -f "$f" ] && systemctl enable --now "$f"; done; true'
+
+        [Install]
+        WantedBy=multi-user.target
+    - name: adguard2.service
+      dropins:
+        - name: 10-felix-mounts.conf
+          contents: |
+            [Unit]
+            RequiresMountsFor=/var/lib/docker
+            After=var-lib-docker.mount
     - name: keepalived.service
       dropins:
         - name: 20-ordering.conf

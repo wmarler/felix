@@ -97,9 +97,17 @@ shopt -s histappend                      # APPEND_HISTORY
 
 PROMPT_COMMAND="history -a; history -c; history -r${PROMPT_COMMAND:+; $PROMPT_COMMAND}"  # SHARE_HISTORY
 # PROMPT
+color_white='\[\033[37m\]'
+color_red='\[\033[31m\]'
 color_green='\[\033[32m\]'
 color_blue_bold='\[\033[1;34m\]'
 color_reset='\[\033[0m\]'
+date="${color_white}\t"
+user="${color_red}\u${color_reset}"
+host="${color_green}(\h)${color_reset}"
+cpath="${color_blue_bold}\w"
+end="${color_reset}% "
+
 PS1="${color_green}\u@\h${color_reset} ${color_blue_bold}\w${color_reset} \$ "
 
 

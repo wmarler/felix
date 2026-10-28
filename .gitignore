@@ -1,5 +1,6 @@
 flatcar_production_qemu_image.*
 src/felix.secrets
+felix.config
 felix.ign
 flatcar_boot.log
 staging/
@@ -7,3 +8,5 @@ staging/
 felix.log
 *.iso
 *.img
+disks/
+.vscode/

@@ -94,7 +94,6 @@ export HISTCONTROL=ignoredups
 set -o notify                            # NOTIFY
 shopt -s autocd                          # AUTOCD
 shopt -s histappend                      # APPEND_HISTORY
-shopt -s autocd
 
 PROMPT_COMMAND="history -a; history -c; history -r${PROMPT_COMMAND:+; $PROMPT_COMMAND}"  # SHARE_HISTORY
 # PROMPT
@@ -108,6 +107,7 @@ user="${color_red}\u${color_reset}"
 host="${color_green}(\h)${color_reset}"
 cpath="${color_blue_bold}\w"
 end="${color_reset}% "
+
 PS1="$date $user $host $cpath$end"
 
 

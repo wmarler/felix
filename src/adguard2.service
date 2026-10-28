@@ -3,11 +3,13 @@ Description=adguard and adguard-sync docker compose linked services
 PartOf=docker.service
 Requires=docker.service network-online.target
 After=docker.service network-online.target
+# Everything this unit needs (compose file, conf, work) lives on the appdata disk
+RequiresMountsFor=/mnt/appdata
 
 [Service]
 Type=simple
 Slice=docker-compose.slice
-WorkingDirectory=/etc/docker-compose/adguard2
+WorkingDirectory=/mnt/appdata/adguard2
 
 # Tear down any existing state before starting
 ExecStartPre=-/usr/bin/docker compose -f compose.yaml down

@@ -22,8 +22,8 @@ services:
       # - "10.10.1.12:443:443"
       # - 5443:5443
     volumes:
-      - /opt/adguard/conf:/opt/adguardhome/conf
-      - /opt/adguard/work:/opt/adguardhome/work
+      - /mnt/appdata/adguard2/conf:/opt/adguardhome/conf
+      - /mnt/appdata/adguard2/work:/opt/adguardhome/work
       - /etc/localtime:/etc/localtime:ro
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://10.10.1.12:82"]
