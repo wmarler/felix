@@ -9,19 +9,19 @@ storage:
     - device: /dev/disk/by-id/virtio-appdata
       format: ext4
       path: /mnt/appdata
-      wipe_filesystem: true
+      wipe_filesystem: false  # Set true on first install
       with_mount_unit: true
       label: appdata
     - device: /dev/disk/by-id/virtio-containerd
       format: ext4
       path: /var/lib/containerd
-      wipe_filesystem: true
+      wipe_filesystem: false  # Set true on first install
       with_mount_unit: true
       label: containerd
     - device: /dev/disk/by-id/virtio-docker
       format: ext4
       path: /var/lib/docker
-      wipe_filesystem: true
+      wipe_filesystem: false  # Set true on first install
       with_mount_unit: true
       label: docker
   directories:
@@ -43,15 +43,18 @@ storage:
       mode: 0644
       contents:
         inline: felix
+    - path: /etc/flatcar/update.conf
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          REBOOT_STRATEGY=reboot
+          LOCKSMITHD_REBOOT_WINDOW_START=03:00
+          LOCKSMITHD_REBOOT_WINDOW_LENGTH=2h
     - path: /etc/systemd/network/static.network
       mode: 0644
       contents:
         local: network.config
-#   - path: /etc/fstab
-#     mode: 0644
-#     append:
-#       - inline: |
-#           10.10.1.99:/media /media nfs defaults,noauto,noatime,nofail,_netdev 0 0
     - path: /etc/sysctl.d/99-keepalived-vrrp.conf
       contents:
         inline: |
@@ -140,6 +143,8 @@ storage:
 
 systemd:
   units:
+    - name: serial-getty@ttyS0
+      enabled: false
     - name: containerd.service
       dropins:
         - name: 10-felix-mounts.conf
@@ -163,15 +168,20 @@ systemd:
         RequiresMountsFor=/mnt/appdata
         RequiresMountsFor=/var/lib/docker
         Wants=docker.service
-        After=var-lib-docker.mount docker.service
+        After=docker.service
 
         [Service]
         Type=oneshot
         RemainAfterExit=yes
-        # "systemctl enable <abs path>" links the unit into /etc/systemd/system and
-        # enables it in one step; it is idempotent on reboot (systemctl link is not).
-        # --now also starts it.
-        ExecStart=/bin/bash -c 'for f in /mnt/appdata/systemd-units/*.service; do [ -f "$f" ] && systemctl enable --now "$f"; done; true'
+
+        # 1. Link any drop-in overlay directories and reload the systemd daemon
+        ExecStartPre=/bin/bash -c 'for d in /mnt/appdata/systemd-units/overlays/*.d; do [ -d "$$d" ] && ln -sfn "$$d" "/etc/systemd/system/$$(basename "$$d")"; done; systemctl daemon-reload; true'
+
+        # 2. Link sysusers configurations and generate the users immediately
+        ExecStartPre=/bin/bash -c 'mkdir -p /etc/sysusers.d; for f in /mnt/appdata/systemd-units/sysusers.d/*.conf; do [ -f "$$f" ] && ln -sfn "$$f" "/etc/sysusers.d/$$(basename "$$f")"; done; systemd-sysusers; true'
+        
+        # 3. Enable and start the container services.
+        ExecStart=/bin/bash -c 'for f in /mnt/appdata/systemd-units/*.service; do [ -f "$$f" ] && systemctl enable --now "$$f"; done; true'        
 
         [Install]
         WantedBy=multi-user.target
@@ -190,6 +200,15 @@ systemd:
             After=adguard2.service
     - name: systemd-sysupdate.timer
       enabled: true
+    - name: systemd-sysupdate-reboot.service
+      dropins:
+        - name: clear-main.conf
+          contents: |
+            [Service]
+            # Clear the inherited default global update action
+            ExecStart=
+            # Replace it with a dummy success indicator
+            ExecStart=/usr/bin/true
     - name: systemd-sysupdate.service
       dropins:
         - name: docker-compose.conf
